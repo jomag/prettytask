@@ -1,4 +1,6 @@
 
+import sys
+
 __version__ = "0.0.0"
 
 try:
@@ -49,6 +51,10 @@ WORK_IN_PROGRESS = "... "
 class Error(Exception):
     def __str__(self):
         return "failed"
+
+
+class InputError(Exception):
+    pass
 
 
 def error(msg):
@@ -117,9 +123,166 @@ class Task:
         sys.exit(1)
 
 
-def prompt(msg):
-    """Prompt for input from the user"""
-    print(msg)
-    response = input()
-    if response not in ["y", "Y"]:
-        raise Cancel()
+def _print_prompt(msg, default=None):
+    if default is not None:
+        default_str = "[%s] " % default
+    else:
+        default_str = ""
+    print(msg + " " + default_str, flush=True, end="")
+
+
+def _prompt_input_error(short_msg, long_msg):
+    print(ERROR_COLOR + short_msg + ": " + RESET + RED + long_msg + RESET)
+
+
+def _prompt_string(msg, empty=False, stripped=False, maxlen=None, retries=None, default=None):
+    while True:
+        _print_prompt(msg)
+        value = input()
+        if stripped:
+            value = value.strip()
+
+        if not value:
+            if default is not None:
+                return default
+            if empty is True:
+                return value
+            else:
+                _prompt_input_error("Invalid input", "empty string")
+
+        elif maxlen is not None and len(value) > maxlen:
+            _prompt_input_error("Invalid input", "max %d characters" % maxlen)
+
+        else:
+            return value
+
+        if retries is not None:
+            if retries > 0:
+                retries -= 1
+            else:
+                raise InputError("Retry limit reached")
+
+
+def _prompt_int(msg, empty=False, retries=None, default=None):
+    while True:
+        if retries == 0:
+            raise InputError("Retry limit reached")
+        elif retries is not None:
+            retries -= 1
+
+        _print_prompt(msg, default=default)
+        inp = input().strip()
+
+        if not inp:
+            if empty is True:
+                return None
+            if default is not None:
+                return default
+            _prompt_input_error("Invalid input", "empty string")
+            continue
+
+        try:
+            if inp.startswith("0x"):
+                value = int(inp, 16)
+            else:
+                value = int(inp)
+        except ValueError:
+            _prompt_input_error("Invalid input", "%s is not a valid integer" % inp)
+            continue
+
+        return value
+
+def _prompt_bool(msg, empty=False, default=None, retries=None):
+    if default is True:
+        defstr = "yes"
+    elif default is False:
+        defstr = "no"
+    else:
+        defstr = None
+
+    while True:
+        if retries == 0:
+            raise InputError("Retry limit reached")
+        elif retries is not None:
+            retries -= 1
+
+        _print_prompt(msg, default=defstr)
+        inp = input().strip().lower()
+
+        if not inp:
+            if empty is True:
+                return None
+            else:
+                inp = defstr
+
+        if not inp:
+            _prompt_input_error("Invalid input", "empty value")
+            continue
+
+        if inp in ["yes", "y"]:
+            return True
+        if inp in ["no", "n"]:
+            return False
+
+        _prompt_input_error("Invalid input", "please enter yes (y) or no (n)")
+
+
+def _prompt_choice(msg, choices, empty=False, default=None, retries=None):
+    while True:
+        if retries == 0:
+            raise InputError("Retry limit reached")
+        elif retries is not None:
+            retries -= 1
+
+        n = 1
+        for c in choices:
+            print("%d. %s" % (n, c))
+            n += 1
+
+        _print_prompt(msg, default=default)
+        inp = input().strip()
+
+        if not inp:
+            if empty is True:
+                return None
+            if default is not None:
+                return default
+            else:
+                _prompt_input_error("Invalid input", "no selection")
+                continue
+
+        try:
+            value = int(inp)
+        except ValueError:
+            _prompt_input_error("Invalid input", "%s is not a valid choice" % inp)
+            continue
+
+        try:
+            return choices[value-1]
+        except IndexError:
+            _prompt_input_error("Invalid input", "%s is not a valid choice" % inp)
+
+
+def prompt(msg, type=str, choices=None, stripped=False, empty=False, maxlen=None, default=None, retries=None):
+    """Prompt for input from the user
+
+    Args:
+        msg: Message to display to user
+        type: Data type to request from user
+        choices: List of choices for the user to select among
+        stripped: Strip whitespace from string values
+        empty: Allow empty response
+        maxlen: Max length for string values
+        default: Default value to be returned on empty input from user
+        retries: Number of retries before giving up
+    """
+    if choices:
+        return _prompt_choice(msg, choices, empty=empty, default=default)
+    elif type is str:
+        return _prompt_string(msg, empty=empty, stripped=stripped, maxlen=maxlen, default=default)
+    elif type is int:
+        return _prompt_int(msg, empty=empty, default=default, retries=retries)
+    elif type is bool:
+        return _prompt_bool(msg, empty=empty, default=default, retries=retries)
+    else:
+        raise ValueError("Unsupported type: %s" % type.__class__.__name__)

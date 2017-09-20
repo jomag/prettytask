@@ -1,4 +1,4 @@
-from prettytask import Task, TaskGroup, Error
+from prettytask import Task, TaskGroup, Error, prompt
 
 
 def main():
@@ -28,6 +28,17 @@ def main():
         with Task("Finally a third one") as task:
             task.ok("all done!")
 
+    x = prompt("What is your name?", type=str, stripped=True, default="Foo")
+    print("Hello, {} ({})".format(x, type(x)))
+
+    y = prompt("What is your age?", type=int, default=42, retries=3)
+    print("Got it: {} years ({})".format(y, type(y)))
+
+    z = prompt("What is your favourite color?", choices=["red", "green", "blue"])
+    print("Color: {} ({})".format(z, type(z)))
+
+    w = prompt("Are we done?", type=bool, default=True)
+    print("Done? {} ({})".format(w, type(w)))
 
 
 if __name__ == "__main__":
