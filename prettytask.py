@@ -44,6 +44,8 @@ TASK_COLOR = ""
 GROUP_LINE_COLOR = BRIGHT + GREEN
 GROUP_TEXT_COLOR = BRIGHT + WHITE
 
+INPUT_COLOR = BRIGHT + WHITE
+
 # This string is appended to tasks while they are being performed
 WORK_IN_PROGRESS = "... "
 
@@ -77,7 +79,7 @@ class TaskGroup:
 
     def __init__(self, description):
         self.description = description
-    
+
     def __enter__(self):
         print("\n%s%s%s" % (GROUP_TEXT_COLOR, self.description, RESET))
         print(GROUP_LINE_COLOR + (TaskGroup.line_char * len(self.description)) + RESET)
@@ -123,12 +125,18 @@ class Task:
         sys.exit(1)
 
 
-def _print_prompt(msg, default=None):
+def _print_prompt(msg, default=None, end=""):
     if default is not None:
         default_str = "[%s] " % default
     else:
         default_str = ""
-    print(msg + " " + default_str, flush=True, end="")
+    print(msg + " " + default_str, flush=True, end=end)
+
+def _prompt_input():
+    print(INPUT_COLOR, flush=True, end="")
+    data = input()
+    print(RESET, flush=True, end="")
+    return data
 
 
 def _prompt_input_error(short_msg, long_msg):
@@ -138,7 +146,8 @@ def _prompt_input_error(short_msg, long_msg):
 def _prompt_string(msg, empty=False, stripped=False, maxlen=None, retries=None, default=None):
     while True:
         _print_prompt(msg)
-        value = input()
+        value = _prompt_input()
+
         if stripped:
             value = value.strip()
 
@@ -171,7 +180,7 @@ def _prompt_int(msg, empty=False, retries=None, default=None):
             retries -= 1
 
         _print_prompt(msg, default=default)
-        inp = input().strip()
+        inp = _prompt_input().strip()
 
         if not inp:
             if empty is True:
@@ -207,7 +216,7 @@ def _prompt_bool(msg, empty=False, default=None, retries=None):
             retries -= 1
 
         _print_prompt(msg, default=defstr)
-        inp = input().strip().lower()
+        inp = _prompt_input().strip().lower()
 
         if not inp:
             if empty is True:
