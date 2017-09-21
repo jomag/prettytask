@@ -280,14 +280,12 @@ def _prompt_choice(msg, choices, empty=False, default=None, retries=None):
 
         try:
             value = int(inp)
+            if value < 1 or value > len(choices):
+                raise ValueError("out of range")
+            return choices[value-1]
         except ValueError:
             _prompt_input_error("Invalid input", "%s is not a valid choice" % inp)
             continue
-
-        try:
-            return choices[value-1]
-        except IndexError:
-            _prompt_input_error("Invalid input", "%s is not a valid choice" % inp)
 
 
 def prompt(msg, type=str, choices=None, stripped=False, empty=False, maxlen=None, default=None, retries=None):
