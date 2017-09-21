@@ -62,6 +62,10 @@ class InputError(Exception):
     pass
 
 
+class ValidationError(Exception):
+    pass
+
+
 def error(msg):
     sys.stderr.write("%s%s%s%s%s\n" % (ERROR_PREFIX_COLOR, ERROR_PREFIX, ERROR_MESSAGE_COLOR, msg, RESET))
 
@@ -155,55 +159,61 @@ def _prompt_string(msg, empty=False, stripped=False, maxlen=None, retries=None, 
         if stripped:
             value = value.strip()
 
-        if not value:
-            if default is not None:
-                return default
-            if empty is True:
-                return value
-            else:
-                _prompt_input_error("Invalid input", "empty string")
+        try:
+            if not value:
+                if default is not None:
+                    return default
+                if empty is True:
+                    return value
+                else:
+                    raise ValidationError("empty data")
 
-        elif maxlen is not None and len(value) > maxlen:
-            _prompt_input_error("Invalid input", "max %d characters" % maxlen)
+            if maxlen is not None and len(value) > maxlen:
+                raise ValidationError("max %d characters allowed" % maxlen)
 
-        else:
             return value
-
-        if retries is not None:
-            if retries > 0:
+        except ValidationError as e:
+            _prompt_input_error("Validation error", str(e))
+            if retries is False or retries == 1:
+                raise
+            elif retries is not None:
                 retries -= 1
-            else:
-                raise InputError("Retry limit reached")
 
 
-def _prompt_int(msg, empty=False, retries=None, default=None):
+def _prompt_int(msg, empty, retries, default, min, max):
     while True:
-        if retries == 0:
-            raise InputError("Retry limit reached")
-        elif retries is not None:
-            retries -= 1
-
         _print_prompt(msg, default=default)
         inp = _prompt_input().strip()
 
-        if not inp:
-            if empty is True:
-                return None
-            if default is not None:
-                return default
-            _prompt_input_error("Invalid input", "empty string")
-            continue
-
         try:
-            if inp.startswith("0x"):
-                value = int(inp, 16)
-            else:
-                value = int(inp)
-        except ValueError:
-            _prompt_input_error("Invalid input", "%s is not a valid integer" % inp)
-            continue
+            if not inp:
+                if empty is True:
+                    return None
+                elif default is not None:
+                    return default
+                else:
+                    raise ValidationError("empty data")
 
-        return value
+            try:
+                if inp.startswith("0x"):
+                    value = int(inp, 16)
+                else:
+                    value = int(inp)
+            except ValueError:
+                raise ValidationError("%s is not a valid integer" % inp)
+
+            if min is not None and value < min:
+                raise ValidationError("%d is out of range: min %d" % (value, min))
+            if max is not None and value > max:
+                raise ValidationError("%d is out of range: max %d" % (value, max))
+
+            return value
+        except ValidationError as e:
+            _prompt_input_error("Validation error", str(e))
+            if retries is False or retries == 1:
+                raise
+            elif retries is not None:
+                retries -= 1
 
 def _prompt_bool(msg, empty=False, default=None, retries=None):
     if default is True:
@@ -288,7 +298,7 @@ def _prompt_choice(msg, choices, empty=False, default=None, retries=None):
             continue
 
 
-def prompt(msg, type=str, choices=None, stripped=False, empty=False, maxlen=None, default=None, retries=None):
+def prompt(msg, type=str, choices=None, stripped=False, empty=False, maxlen=None, default=None, retries=None, min=None, max=None):
     """Prompt for input from the user
 
     Args:
@@ -300,13 +310,15 @@ def prompt(msg, type=str, choices=None, stripped=False, empty=False, maxlen=None
         maxlen: Max length for string values
         default: Default value to be returned on empty input from user
         retries: Number of retries before giving up
+        min: Min numeric value
+        max: Max numeric value
     """
     if choices:
         return _prompt_choice(msg, choices, empty=empty, default=default)
     elif type is str:
-        return _prompt_string(msg, empty=empty, stripped=stripped, maxlen=maxlen, default=default)
+        return _prompt_string(msg, empty=empty, stripped=stripped, maxlen=maxlen, default=default, retries=retries)
     elif type is int:
-        return _prompt_int(msg, empty=empty, default=default, retries=retries)
+        return _prompt_int(msg, empty=empty, default=default, retries=retries, min=min, max=max)
     elif type is bool:
         return _prompt_bool(msg, empty=empty, default=default, retries=retries)
     else:
