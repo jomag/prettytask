@@ -66,6 +66,11 @@ class ValidationError(Exception):
     pass
 
 
+class Separator:
+    def __str__(self):
+        return "----------------"
+
+
 def error(msg):
     sys.stderr.write("%s%s%s%s%s\n" % (ERROR_PREFIX_COLOR, ERROR_PREFIX, ERROR_MESSAGE_COLOR, msg, RESET))
 
@@ -224,78 +229,89 @@ def _prompt_bool(msg, empty=False, default=None, retries=None):
         defstr = None
 
     while True:
-        if retries == 0:
-            raise InputError("Retry limit reached")
-        elif retries is not None:
-            retries -= 1
-
         _print_prompt(msg, default=defstr)
         inp = _prompt_input().strip().lower()
 
-        if not inp:
-            if empty is True:
-                return None
-            elif default is True:
-                inp = "yes"
-            elif default is False:
-                inp = "no"
+        try:
+            if not inp:
+                if empty is True:
+                    return None
+                elif default is True:
+                    inp = "yes"
+                elif default is False:
+                    inp = "no"
 
-        if not inp:
-            _prompt_input_error("Invalid input", "empty value")
-            continue
+            if not inp:
+                raise ValidationError("empty data")
 
-        if inp in ["yes", "y"]:
-            return True
-        if inp in ["no", "n"]:
-            return False
+            if inp in ["yes", "y"]:
+                return True
+            if inp in ["no", "n"]:
+                return False
 
-        _prompt_input_error("Invalid input", "please enter yes (y) or no (n)")
+            raise ValidationError("please enter yes (y) or no (n)")
+        except ValidationError as e:
+            _prompt_input_error("Validation error", str(e))
+            if retries is False or retries == 1:
+                raise
+            elif retries is not None:
+                retries -= 1
 
 
-def _prompt_choice(msg, choices, empty=False, default=None, retries=None):
+def _prompt_choice(msg, choices, empty, default, retries):
+    choices_wo_separators = [c for c in choices if type(c) != Separator]
+    
     try:
-        default_index = choices.index(default)
+        default_index = choices_wo_separators.index(default)
         default_str = " %s[%d]%s " % (DEFAULTS_COLOR, default_index + 1, RESET)
     except ValueError:
         default_index = None
         default_str = ""
 
     while True:
-        if retries == 0:
-            raise InputError("Retry limit reached")
-        elif retries is not None:
-            retries -= 1
-
         _print_prompt(msg, end="\n")
 
         n = 1
         for c in choices:
-            if c == default:
-                print("  %s%d) %s %s(default)%s" % (BRIGHT + WHITE, n, c, DEFAULTS_COLOR, RESET))
+            if type(c) == Separator:
+                print(str(c))
             else:
-                print("  %d) %s" % (n, c))
-            n += 1
+                if c == default:
+                    print("  %s%d) %s %s(default)%s" % (BRIGHT + WHITE, n, c, DEFAULTS_COLOR, RESET))
+                else:
+                    print("  %d) %s" % (n, c))
+                n += 1
 
         print("  Choice:%s" % default_str, end="", flush=True)
         inp = _prompt_input().strip()
 
-        if not inp:
-            if empty is True:
-                return None
-            if default is not None:
-                return default
-            else:
-                _prompt_input_error("Invalid input", "no selection")
-                continue
-
         try:
-            value = int(inp)
-            if value < 1 or value > len(choices):
-                raise ValueError("out of range")
-            return choices[value-1]
-        except ValueError:
-            _prompt_input_error("Invalid input", "%s is not a valid choice" % inp)
-            continue
+            if not inp:
+                if empty is True:
+                    return None
+                if default is not None:
+                    return default
+                else:
+                    raise ValidationError("empty selection")
+
+            try:
+                value = int(inp)
+            except ValueError:
+                raise ValidationError("%s is not a valid choice" % inp)
+            
+            if value < 1 or value > len(choices_wo_separators):
+                 raise ValidationError("out of range")
+
+            try:
+                return choices_wo_separators[value-1]
+            except IndexError:
+                raise ValidationError("out of range")
+        except ValidationError as e:
+            _prompt_input_error("Validation error", str(e))
+            if retries is False or retries == 1:
+                raise
+            elif retries is not None:
+                retries -= 1
 
 
 def prompt(msg, type=str, choices=None, stripped=False, empty=False, maxlen=None, default=None, retries=None, min=None, max=None):
@@ -314,7 +330,7 @@ def prompt(msg, type=str, choices=None, stripped=False, empty=False, maxlen=None
         max: Max numeric value
     """
     if choices:
-        return _prompt_choice(msg, choices, empty=empty, default=default)
+        return _prompt_choice(msg, choices, empty=empty, default=default, retries=retries)
     elif type is str:
         return _prompt_string(msg, empty=empty, stripped=stripped, maxlen=maxlen, default=default, retries=retries)
     elif type is int:

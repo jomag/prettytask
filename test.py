@@ -1,7 +1,7 @@
 
 import pytest
 
-from prettytask import prompt, ValidationError
+from prettytask import prompt, ValidationError, Separator
 
 
 class fake_input:
@@ -131,3 +131,15 @@ def test_prompt_validate_integer_range():
 
         with pytest.raises(ValidationError):
             test()
+
+
+def test_choice_prompt_with_separator():
+    choices = ["foo", "bar", Separator(), "quit"]
+    test = lambda: prompt("", choices=choices, retries=False)
+    with fake_input("1", "2", "3", "4"):
+        assert test() == "foo"
+        assert test() == "bar"
+        assert test() == "quit"
+        with pytest.raises(ValidationError):
+            test()
+
