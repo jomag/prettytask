@@ -67,8 +67,10 @@ class ValidationError(Exception):
 
 
 class Separator:
+    def __init__(self, sep="----------------"):
+        self.sep = sep
     def __str__(self):
-        return "----------------"
+        return self.sep
 
 
 def error(msg):
@@ -274,7 +276,7 @@ def _prompt_choice(msg, choices, empty, default, retries):
         n = 1
         for c in choices:
             if type(c) == Separator:
-                print(str(c))
+                print(BRIGHT + BLACK + "  " + str(c) + RESET)
             else:
                 if c == default:
                     print("  %s%d) %s %s(default)%s" % (BRIGHT + WHITE, n, c, DEFAULTS_COLOR, RESET))

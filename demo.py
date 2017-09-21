@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from prettytask import Task, TaskGroup, Error, prompt
+from prettytask import Task, TaskGroup, Error, prompt, Separator
 
 
 def main():
@@ -35,7 +35,7 @@ def main():
     y = prompt("What is your age?", type=int, default=42, retries=3)
     print("Got it: {} years ({})".format(y, type(y)))
 
-    z = prompt("What is your favourite color?", choices=["red", "green", "blue"], default="green")
+    z = prompt("What is your favourite color?", choices=["red", "green", "blue", Separator("--- Other options:"), "i hate colors"], default="green")
     print("Color: {} ({})".format(z, type(z)))
 
     w = prompt("Are we done?", type=bool, default=True)
