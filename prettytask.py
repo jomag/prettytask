@@ -237,19 +237,31 @@ def _prompt_bool(msg, empty=False, default=None, retries=None):
 
 
 def _prompt_choice(msg, choices, empty=False, default=None, retries=None):
+    try:
+        default_index = choices.index(default)
+        default_str = " [%d] " % (default_index + 1)
+    except ValueError:
+        default_index = None
+        default_str = ""
+
     while True:
         if retries == 0:
             raise InputError("Retry limit reached")
         elif retries is not None:
             retries -= 1
 
+        _print_prompt(msg, end="\n")
+
         n = 1
         for c in choices:
-            print("%d. %s" % (n, c))
+            if c == default:
+                print("  %s%d) %s %s(default)%s" % (BRIGHT + WHITE, n, c, BRIGHT + BLUE, RESET))
+            else:
+                print("  %d) %s" % (n, c))
             n += 1
 
-        _print_prompt(msg, default=default)
-        inp = input().strip()
+        print("  Choice:%s" % default_str, end="", flush=True)
+        inp = _prompt_input().strip()
 
         if not inp:
             if empty is True:

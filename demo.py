@@ -6,7 +6,7 @@ def main():
         pass
 
     with Task("A task with a custom success message") as task:
-        task.ok("that went well!") 
+        task.ok("that went well!")
 
     with Task("A task that fails") as task:
         raise Error
@@ -34,7 +34,7 @@ def main():
     y = prompt("What is your age?", type=int, default=42, retries=3)
     print("Got it: {} years ({})".format(y, type(y)))
 
-    z = prompt("What is your favourite color?", choices=["red", "green", "blue"])
+    z = prompt("What is your favourite color?", choices=["red", "green", "blue"], default="green")
     print("Color: {} ({})".format(z, type(z)))
 
     w = prompt("Are we done?", type=bool, default=True)
@@ -43,4 +43,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
