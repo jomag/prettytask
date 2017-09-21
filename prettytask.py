@@ -207,9 +207,9 @@ def _prompt_int(msg, empty=False, retries=None, default=None):
 
 def _prompt_bool(msg, empty=False, default=None, retries=None):
     if default is True:
-        defstr = "yes"
+        defstr = "Y/n"
     elif default is False:
-        defstr = "no"
+        defstr = "y/N"
     else:
         defstr = None
 
@@ -225,8 +225,10 @@ def _prompt_bool(msg, empty=False, default=None, retries=None):
         if not inp:
             if empty is True:
                 return None
-            else:
-                inp = defstr
+            elif default is True:
+                inp = "yes"
+            elif default is False:
+                inp = "no"
 
         if not inp:
             _prompt_input_error("Invalid input", "empty value")
