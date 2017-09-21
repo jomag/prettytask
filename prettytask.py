@@ -10,14 +10,16 @@ try:
     YELLOW = colorama.Fore.YELLOW
     BLUE = colorama.Fore.BLUE
     WHITE = colorama.Fore.WHITE
+    BLACK = colorama.Fore.BLACK
     RESET = colorama.Style.RESET_ALL
     BRIGHT = colorama.Style.BRIGHT
-except:
+except ImportError:
     RED = ""
     GREEN = ""
     YELLOW = ""
     BLUE = ""
     WHITE = ""
+    BLACK = ""
     RESET = ""
     BRIGHT = ""
 
@@ -45,6 +47,7 @@ GROUP_LINE_COLOR = BRIGHT + GREEN
 GROUP_TEXT_COLOR = BRIGHT + WHITE
 
 INPUT_COLOR = BRIGHT + WHITE
+DEFAULTS_COLOR = BRIGHT + BLACK
 
 # This string is appended to tasks while they are being performed
 WORK_IN_PROGRESS = "... "
@@ -127,10 +130,11 @@ class Task:
 
 def _print_prompt(msg, default=None, end=""):
     if default is not None:
-        default_str = "[%s] " % default
+        default_str = " %s[%s]%s " % (DEFAULTS_COLOR, default, RESET)
     else:
         default_str = ""
     print(msg + " " + default_str, flush=True, end=end)
+
 
 def _prompt_input():
     print(INPUT_COLOR, flush=True, end="")
@@ -239,7 +243,7 @@ def _prompt_bool(msg, empty=False, default=None, retries=None):
 def _prompt_choice(msg, choices, empty=False, default=None, retries=None):
     try:
         default_index = choices.index(default)
-        default_str = " [%d] " % (default_index + 1)
+        default_str = " %s[%d]%s " % (DEFAULTS_COLOR, default_index + 1, RESET)
     except ValueError:
         default_index = None
         default_str = ""
@@ -255,7 +259,7 @@ def _prompt_choice(msg, choices, empty=False, default=None, retries=None):
         n = 1
         for c in choices:
             if c == default:
-                print("  %s%d) %s %s(default)%s" % (BRIGHT + WHITE, n, c, BRIGHT + BLUE, RESET))
+                print("  %s%d) %s %s(default)%s" % (BRIGHT + WHITE, n, c, DEFAULTS_COLOR, RESET))
             else:
                 print("  %d) %s" % (n, c))
             n += 1
