@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from prettytask import Task, TaskGroup, Error, prompt
 
 
