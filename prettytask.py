@@ -4,11 +4,13 @@ import sys
 #
 # Changes:
 #
+# 0.0.2: python 2 compatibility
+#
 # 0.0.1: include license
 #
 # 0.0.0: initial release
 #
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 py2 = sys.version_info[0] < 3
 
@@ -129,9 +131,16 @@ class Task:
     BULLET = TASK_BULLET_COLOR + TASK_BULLET + RESET
     wip = WORK_IN_PROGRESS
 
-    def __init__(self, description):
+    def __init__(self, description, silent=True):
+        """Initialize Task
+
+        Args:
+            description: the task description
+            silent: set to False if the task will print to stdout
+        """
         self.description = description
         self.result = None
+        self.silent = silent
 
     def __enter__(self):
         _print("%s%s%s%s%s" % (Task.BULLET, TASK_COLOR, self.description, self.wip, RESET), nl=False)
