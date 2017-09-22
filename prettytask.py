@@ -1,7 +1,16 @@
 
 import sys
 
-__version__ = "0.0.0"
+#
+# Changes:
+#
+# 0.0.1: include license
+#
+# 0.0.0: initial release
+#
+__version__ = "0.0.1"
+
+py2 = sys.version_info[0] < 3
 
 try:
     import colorama
@@ -58,6 +67,11 @@ class Error(Exception):
         return "failed"
 
 
+class FatalError(Exception):
+    def __str__(self):
+        return "fatal error"
+
+
 class InputError(Exception):
     pass
 
@@ -87,6 +101,14 @@ def fatal_error(msg, exit=True):
     if exit:
         sys.exit(1)
 
+def _print(text, nl=True):
+    """Compatible with py2 and py3"""
+    sys.stdout.write(text)
+    if nl:
+        sys.stdout.write("\n")
+    else:
+        sys.stdout.flush()
+
 
 class TaskGroup:
     line_char = "-"
@@ -95,8 +117,8 @@ class TaskGroup:
         self.description = description
 
     def __enter__(self):
-        print("\n%s%s%s" % (GROUP_TEXT_COLOR, self.description, RESET))
-        print(GROUP_LINE_COLOR + (TaskGroup.line_char * len(self.description)) + RESET)
+        _print("\n%s%s%s" % (GROUP_TEXT_COLOR, self.description, RESET))
+        _print(GROUP_LINE_COLOR + (TaskGroup.line_char * len(self.description)) + RESET)
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
@@ -109,53 +131,45 @@ class Task:
 
     def __init__(self, description):
         self.description = description
-        self.finished = False
+        self.result = None
 
     def __enter__(self):
-        print("%s%s%s%s%s" % (Task.BULLET, TASK_COLOR, self.description, self.wip, RESET), flush=True, end="")
+        _print("%s%s%s%s%s" % (Task.BULLET, TASK_COLOR, self.description, self.wip, RESET), nl=False)
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        if not self.finished:
-            if exc_type is None:
-                self.ok()
-            elif exc_type is Error:
-                self.error(str(exc_value))
-                return True
-            else:
-                self.error(str(exc_value))
+        if exc_type is None:
+            result = self.result or "OK"
+            _print(("\b" * len(self.wip)) + ": " + SUCCESS_COLOR + result + RESET)
+        else:
+            result = str(exc_value)
+            _print(("\b" * len(self.wip)) + ": " + ERROR_COLOR + result + RESET)
 
-    def ok(self, message="OK"):
-        print(("\b" * len(self.wip)) + ": " + SUCCESS_COLOR + message + RESET)
-        self.finished = True
+            if exc_type == FatalError:
+                sys.exit(1)
 
-    def error(self, message="failed"):
-        print(("\b" * len(self.wip)) + ": " + ERROR_COLOR + message + RESET)
-        self.finished = True
-
-    def fatal_error(self, message="failed"):
-        self.error(message)
-        self.finished = True
-        sys.exit(1)
+            # Don't pass on the exception if the
+            # exception type is prettytask.Error
+            return exc_type is Error
 
 
-def _print_prompt(msg, default=None, end=""):
+def _print_prompt(msg, default=None, nl=False):
     if default is not None:
         default_str = " %s[%s]%s " % (DEFAULTS_COLOR, default, RESET)
     else:
         default_str = ""
-    print(msg + " " + default_str, flush=True, end=end)
+    _print(msg + " " + default_str, nl=nl)
 
 
 def _prompt_input():
-    print(INPUT_COLOR, flush=True, end="")
-    data = input()
-    print(RESET, flush=True, end="")
+    _print(INPUT_COLOR, nl=False)
+    data = raw_input() if py2 else input()
+    _print(RESET, nl=False)
     return data
 
 
 def _prompt_input_error(short_msg, long_msg):
-    print(ERROR_COLOR + short_msg + ": " + RESET + RED + long_msg + RESET)
+    _print(ERROR_COLOR + short_msg + ": " + RESET + RED + long_msg + RESET)
 
 
 def _prompt_string(msg, empty=False, stripped=False, maxlen=None, retries=None, default=None):
@@ -261,7 +275,7 @@ def _prompt_bool(msg, empty=False, default=None, retries=None):
 
 
 def _prompt_choice(msg, choices, empty, default, retries):
-    choices_wo_separators = [c for c in choices if type(c) != Separator]
+    choices_wo_separators = [c for c in choices if not isinstance(c, Separator)]
     
     try:
         default_index = choices_wo_separators.index(default)
@@ -271,20 +285,20 @@ def _prompt_choice(msg, choices, empty, default, retries):
         default_str = ""
 
     while True:
-        _print_prompt(msg, end="\n")
+        _print_prompt(msg, nl=True)
 
         n = 1
         for c in choices:
-            if type(c) == Separator:
-                print(BRIGHT + BLACK + "  " + str(c) + RESET)
+            if isinstance(c, Separator):
+                _print(BRIGHT + BLACK + "  " + str(c) + RESET)
             else:
                 if c == default:
-                    print("  %s%d) %s %s(default)%s" % (BRIGHT + WHITE, n, c, DEFAULTS_COLOR, RESET))
+                    _print("  %s%d) %s %s(default)%s" % (BRIGHT + WHITE, n, c, DEFAULTS_COLOR, RESET))
                 else:
-                    print("  %d) %s" % (n, c))
+                    _print("  %d) %s" % (n, c))
                 n += 1
 
-        print("  Choice:%s" % default_str, end="", flush=True)
+        _print("  Choice:%s" % default_str, nl=False)
         inp = _prompt_input().strip()
 
         try:

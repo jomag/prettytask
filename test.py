@@ -1,7 +1,11 @@
 
+import sys
+
 import pytest
 
 from prettytask import prompt, ValidationError, Separator
+
+py2 = sys.version_info[0] < 3
 
 
 class fake_input:
@@ -32,12 +36,19 @@ class fake_input:
             raise EOFError()
 
     def __enter__(self):
-        self.original = __builtins__["input"]
-        __builtins__["input"] = self._fake_input
+        if py2:
+            self.original = __builtins__["raw_input"]
+            __builtins__["raw_input"] = self._fake_input
+        else:
+            self.original = __builtins__["input"]
+            __builtins__["input"] = self._fake_input
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        __builtins__["input"] = self.original
+        if py2:
+            __builtins__["raw_input"] = self.original
+        else:
+            __builtins__["input"] = self.original
         if exc_type is None:
             if not self.eoi():
                 raise RuntimeError("End of input not reached")
@@ -45,15 +56,25 @@ class fake_input:
 
 def test_fake_input():
     with fake_input("hello", "there"):
-        assert input() == "hello"
-        assert input() == "there"
-        with pytest.raises(EOFError):
-            input()
+        if py2:
+            assert raw_input() == "hello"
+            assert raw_input() == "there"
+            with pytest.raises(EOFError):
+                raw_input()
+        else:
+            assert input() == "hello"
+            assert input() == "there"
+            with pytest.raises(EOFError):
+                input()
 
     with pytest.raises(RuntimeError):
         with fake_input("1", "2", "3"):
-            input()
-            input()
+            if py2:
+                raw_input()
+                raw_input()
+            else:
+                input()
+                input()
 
 
 def test_prompt_for_string():

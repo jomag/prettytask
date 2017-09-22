@@ -1,13 +1,19 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+
+import sys
+
 from prettytask import Task, TaskGroup, Error, prompt, Separator
 
 
 def main():
+    with Task("Checking python version") as task:
+        task.result = "%d.%d.%d" % sys.version_info[:3]
+
     with Task("A quick task"):
         pass
 
     with Task("A task with a custom success message") as task:
-        task.ok("that went well!")
+        task.result = "that went well!"
 
     with Task("A task that fails") as task:
         raise Error
@@ -27,7 +33,7 @@ def main():
         with Task("Another one that fails"):
             raise Error
         with Task("Finally a third one") as task:
-            task.ok("all done!")
+            task.result = "all done!"
 
     x = prompt("What is your name?", type=str, stripped=True, default="Foo")
     print("Hello, {} ({})".format(x, type(x)))
